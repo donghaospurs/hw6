@@ -167,8 +167,8 @@ def degenerate_H(u, v, a, b, T):
 
 
 def constraint_H(u, v, y):
-    H_conjugate = degenerate_H(u, v, 0.03, 0.03, 1).conjugate()
-    H_abs = abs(degenerate_H(u, v, 0.03, 0.03, 1))
+    H_conjugate = degenerate_H(u, v, 0.015, -0.015, 1).conjugate()
+    H_abs = abs(degenerate_H(u, v, 0.015, -0.015, 1))
     if H_abs*H_abs + y*constraint_P[u, v]*constraint_P[u, v] == 0:
         return 0
     else:
@@ -176,16 +176,16 @@ def constraint_H(u, v, y):
 
 
 def vena_H(u, v, K):
-    H_abs = abs(degenerate_H(u, v, 0.03, 0.03, 1))
-    if u*0.03+v*0.03 == 0:
+    H_abs = abs(degenerate_H(u, v, 0.015, -0.015, 1))
+    if u*0.015-v*0.015 == 0:
         return 0
     else:
-        return H_abs * H_abs / (H_abs * H_abs + K) / degenerate_H(u, v, 0.03, 0.03, 1)
+        return H_abs * H_abs / (H_abs * H_abs + K) / degenerate_H(u, v, 0.015, -0.015, 1)
 
 
 for i in range(0, width):
     for j in range(0, height):
-        test_l_G[i, j] = test_F[i, j] * degenerate_H(i, j, 0.03, 0.03, 1)
+        test_l_G[i, j] = test_F[i, j] * degenerate_H(i, j, 0.015, -0.015, 1)
 
 
 # test_l_G_IF = np.fft.ifftshift(test_l_G)
@@ -201,14 +201,14 @@ for i in range(0, width):
         test_c[i, j] = test_l_G_IF_real[i, j]
 
 
-gauss_image = GaussieNoisy(test_c, 0, 10)
+gauss_image = GaussieNoisy(test_c, 0, 0.5)
 vena_G = np.fft.fft2(gauss_image)
 # vena_G = np.fft.fftshift(vena_G)
 # vena_G = np.fft.fft2(test_c)
 for i in range(0, width):
     for j in range(0, height):
-        test_l_F[i, j] = vena_G[i, j] * vena_H(i, j, 0.04)
-        test_l_C[i, j] = vena_G[i, j] * constraint_H(i, j, 0.068)
+        test_l_F[i, j] = vena_G[i, j] * vena_H(i, j, 0.01)
+        test_l_C[i, j] = vena_G[i, j] * constraint_H(i, j, 0.0008)
 
 
 # test_l_F_IF = np.fft.ifftshift(test_l_F)
