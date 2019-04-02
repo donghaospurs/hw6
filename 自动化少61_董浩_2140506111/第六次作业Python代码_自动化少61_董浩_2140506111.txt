@@ -144,8 +144,14 @@ height = test.shape[1]
 test_l_G = np.zeros((width, height), dtype=np.complex128)
 test_l_F = np.zeros((width, height), dtype=np.complex128)
 test_l_C = np.zeros((width, height), dtype=np.complex128)
-constraint_p = np.loadtxt('./P4.txt')
-constraint_P = np.reshape(constraint_p, (512, 512))
+
+test_l_ = np.zeros((512, 512), dtype=np.int8)
+test_l_[0, 1] = -1
+test_l_[1, 0] = -1
+test_l_[1, 2] = -1
+test_l_[2, 1] = -1
+test_l_[1, 1] = 4
+constraint_P = abs(np.fft.fft2(test_l_))
 
 def GaussieNoisy(image, mean, sigma):
     gauss = np.random.normal(mean, sigma, image.shape)
@@ -230,11 +236,10 @@ cv2.imshow('gauss_image', gauss_image)
 cv2.imshow('test_d', test_d)
 cv2.imshow('test_e', test_e)
 
-cv2.imwrite('./test_c.bmp', test_c)
+'''cv2.imwrite('./test_c.bmp', test_c)
 cv2.imwrite('./test_c_gauss_image.bmp', gauss_image)
 cv2.imwrite('./test_d.bmp', test_d)
-cv2.imwrite('./test_e.bmp', test_e)
+cv2.imwrite('./test_e.bmp', test_e)'''
 
 cv2.waitKey(0)
 cv2.destroyAllWindows()
-
