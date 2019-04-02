@@ -1,0 +1,240 @@
+'''在测试图像上产生高斯噪声lena图-需能指定均值和方差；并用多种滤波器恢复图像，分析各自优缺点；
+在测试图像lena图加入椒盐噪声（椒和盐噪声密度均是0.1）；用学过的滤波器恢复图像；
+再使用反谐波分析Q大于0和小于0的作用；'''
+
+import cv2
+import scipy
+import scipy.stats
+import numpy as np
+
+test = cv2.imread("./lena.bmp", 0)
+
+
+def GaussieNoisy(image, mean, sigma):
+    gauss = np.random.normal(mean, sigma, image.shape)
+    noisy = image + gauss
+    return noisy.astype(np.uint8)
+
+
+def spNoisy(image, s_vs_p):
+    sp = np.copy(image)
+    num_salt = np.ceil(image.size * s_vs_p)
+    axes = [np.random.randint(0, i - 1, int(num_salt)) for i in image.shape]
+    sp[axes] = 255
+    num_pepper = np.ceil(image.size * s_vs_p)
+    axes = [np.random.randint(0, i - 1, int(num_pepper)) for i in image.shape]
+    sp[axes] = 0
+    return sp
+
+
+def ArithmeticMeanAlogrithm(image):
+    new_image = np.zeros(image.shape)
+    image = cv2.copyMakeBorder(image, 1, 1, 1, 1, cv2.BORDER_DEFAULT)
+    for i in range(1, image.shape[0]-1):
+        for j in range(1, image.shape[1]-1):
+            new_image[i-1, j-1] = np.mean(image[i-1:i+2, j-1:j+2])
+    return new_image.astype(np.uint8)
+
+
+def GeometricMeanAlogrithm(image):
+    new_image = np.zeros(image.shape)
+    image = cv2.copyMakeBorder(image, 1, 1, 1, 1, cv2.BORDER_DEFAULT)
+    def GeometricMeanOperator(part):
+        part = part.astype(np.float64)
+        p = np.prod(part)
+        return p ** (1 / (part.shape[0] * part.shape[1]))
+    for i in range(1, image.shape[0] - 1):
+        for j in range(1, image.shape[1] - 1):
+            new_image[i - 1, j - 1] = GeometricMeanOperator(image[i - 1:i + 2, j - 1:j + 2])
+    return new_image.astype(np.uint8)
+
+
+def HMeanAlogrithm(image):
+    new_image = np.zeros(image.shape)
+    image = cv2.copyMakeBorder(image, 1, 1, 1, 1, cv2.BORDER_DEFAULT)
+    def HMeanOperator(part):
+        part = part.astype(np.float64)
+        if 0 in part:
+            part = 0
+        else:
+            part = scipy.stats.hmean(part.reshape(-1))
+        return part
+    for i in range(1, image.shape[0]-1):
+        for j in range(1, image.shape[1]-1):
+            new_image[i-1, j-1] = HMeanOperator(image[i-1:i+2, j-1:j+2])
+    return new_image.astype(np.uint8)
+
+
+def IHMeanAlogrithm(image, q):
+    new_image = np.zeros(image.shape)
+    image = cv2.copyMakeBorder(image, 1, 1, 1, 1, cv2.BORDER_DEFAULT)
+    def IHMeanOperator(part, q):
+        part = part.astype(np.float64)
+        part = np.sum(part ** (q + 1)) / np.sum(part ** q)
+        return part
+    for i in range(1, image.shape[0]-1):
+        for j in range(1, image.shape[1]-1):
+            new_image[i-1, j-1] = IHMeanOperator(image[i-1:i+2, j-1:j+2], q)
+    return new_image.astype(np.uint8)
+
+
+gauss_image = GaussieNoisy(test, 0, 25)
+sp_image = spNoisy(test, 0.1)
+ArithmeticMean_gauss_image = ArithmeticMeanAlogrithm(gauss_image)
+ArithmeticMean_sp_image = ArithmeticMeanAlogrithm(sp_image)
+GeometricMean_gauss_image = GeometricMeanAlogrithm(gauss_image)
+GeometricMean_sp_image = GeometricMeanAlogrithm(sp_image)
+HMean_gauss_image = HMeanAlogrithm(gauss_image)
+HMean_sp_image = HMeanAlogrithm(sp_image)
+IHMean_gauss_image_p = IHMeanAlogrithm(gauss_image, 2)
+IHMean_sp_image_p = IHMeanAlogrithm(sp_image, 2)
+IHMean_gauss_image_n = IHMeanAlogrithm(gauss_image, -2)
+IHMean_sp_image_n = IHMeanAlogrithm(sp_image, -2)
+
+cv2.imshow('test', test)
+cv2.imshow('test_g', gauss_image)
+cv2.imshow('test_sp', sp_image)
+cv2.imshow('test_g_am', ArithmeticMean_gauss_image)
+cv2.imshow('test_sp_am', ArithmeticMean_sp_image)
+cv2.imshow('test_g_gm', GeometricMean_gauss_image)
+cv2.imshow('test_sp_gm', GeometricMean_sp_image)
+cv2.imshow('test_g_hm', HMean_gauss_image)
+cv2.imshow('test_sp_hm', HMean_sp_image)
+cv2.imshow('test_g_ihm_p', IHMean_gauss_image_p)
+cv2.imshow('test_sp_ihm_p', IHMean_sp_image_p)
+cv2.imshow('test_g_ihm_n', IHMean_gauss_image_n)
+cv2.imshow('test_sp_ihm_n', IHMean_sp_image_n)
+
+'''cv2.imwrite('./test_g.bmp', gauss_image)
+cv2.imwrite('./test_sp.bmp', sp_image)
+cv2.imwrite('./test_g_am.bmp', ArithmeticMean_gauss_image)
+cv2.imwrite('./test_sp_am.bmp', ArithmeticMean_sp_image)
+cv2.imwrite('./test_g_gm.bmp', GeometricMean_gauss_image)
+cv2.imwrite('./test_sp_gm.bmp', GeometricMean_sp_image)
+cv2.imwrite('./test_g_hm.bmp', HMean_gauss_image)
+cv2.imwrite('./test_sp_hm.bmp', HMean_sp_image)
+cv2.imwrite('./test_g_ihm_p.bmp', IHMean_gauss_image_p)
+cv2.imwrite('./test_sp_ihm_p.bmp', IHMean_sp_image_p)
+cv2.imwrite('./test_g_ihm_n.bmp', IHMean_gauss_image_n)
+cv2.imwrite('./test_sp_ihm_n.bmp', IHMean_sp_image_n)'''
+
+cv2.waitKey(0)
+cv2.destroyAllWindows()
+
+
+'''推导维纳滤波器并实现下边要求；
+(a) 实现模糊滤波器如方程Eq. (5.6-11).
+(b) 模糊lena图像：45度方向，T=1；
+(c) 再模糊的lena图像中增加高斯噪声，均值= 0 ，方差=10 pixels 以产生模糊图像；
+(d)分别利用方程 Eq. (5.8-6)和(5.9-4)，恢复图像；并分析算法的优缺点.'''
+
+import cv2
+import numpy as np
+import cmath
+
+test = cv2.imread("./lena.bmp", 0)
+# test = cv2.imread("./test4.tif", 0)
+test_c = test.copy()
+test_d = test.copy()
+test_e = test.copy()
+test_F = np.fft.fft2(test)
+# test_F = np.fft.fftshift(test_F)
+width = test.shape[0]
+height = test.shape[1]
+test_l_G = np.zeros((width, height), dtype=np.complex128)
+test_l_F = np.zeros((width, height), dtype=np.complex128)
+test_l_C = np.zeros((width, height), dtype=np.complex128)
+constraint_p = np.loadtxt('./P4.txt')
+constraint_P = np.reshape(constraint_p, (512, 512))
+
+def GaussieNoisy(image, mean, sigma):
+    gauss = np.random.normal(mean, sigma, image.shape)
+    noisy = image + gauss
+    return noisy.astype(np.uint8)
+
+
+def degenerate_H(u, v, a, b, T):
+    if u*a+v*b == 0:
+        return 0
+    else:
+        return T*cmath.sin(cmath.pi*(u*a+v*b))*cmath.exp(-1*cmath.sqrt(-1)*cmath.pi*(u*a+v*b))/cmath.pi/(u*a+v*b)
+
+
+def constraint_H(u, v, y):
+    H_conjugate = degenerate_H(u, v, 0.03, 0.03, 1).conjugate()
+    H_abs = abs(degenerate_H(u, v, 0.03, 0.03, 1))
+    if H_abs*H_abs + y*constraint_P[u, v]*constraint_P[u, v] == 0:
+        return 0
+    else:
+        return H_conjugate/(H_abs*H_abs + y*constraint_P[u, v]*constraint_P[u, v])
+
+
+def vena_H(u, v, K):
+    H_abs = abs(degenerate_H(u, v, 0.03, 0.03, 1))
+    if u*0.03+v*0.03 == 0:
+        return 0
+    else:
+        return H_abs * H_abs / (H_abs * H_abs + K) / degenerate_H(u, v, 0.03, 0.03, 1)
+
+
+for i in range(0, width):
+    for j in range(0, height):
+        test_l_G[i, j] = test_F[i, j] * degenerate_H(i, j, 0.03, 0.03, 1)
+
+
+# test_l_G_IF = np.fft.ifftshift(test_l_G)
+test_l_G_IF = np.fft.ifft2(test_l_G)
+test_l_G_IF_real = test_l_G_IF.real
+test_h_min = test_l_G_IF_real.min()
+test_h_m = test_l_G_IF_real.max()-test_h_min
+
+for i in range(0, width):
+    for j in range(0, height):
+        test_l_G_IF_real[i, j] = test_l_G_IF_real[i, j] - test_h_min
+        test_l_G_IF_real[i, j] = int(test_l_G_IF_real[i, j] * 255 / test_h_m)
+        test_c[i, j] = test_l_G_IF_real[i, j]
+
+
+gauss_image = GaussieNoisy(test_c, 0, 10)
+vena_G = np.fft.fft2(gauss_image)
+# vena_G = np.fft.fftshift(vena_G)
+# vena_G = np.fft.fft2(test_c)
+for i in range(0, width):
+    for j in range(0, height):
+        test_l_F[i, j] = vena_G[i, j] * vena_H(i, j, 0.04)
+        test_l_C[i, j] = vena_G[i, j] * constraint_H(i, j, 0.068)
+
+
+# test_l_F_IF = np.fft.ifftshift(test_l_F)
+test_l_F_IF = np.fft.ifft2(test_l_F)
+test_l_F_IF_real = test_l_F_IF.real
+test_f_min = test_l_F_IF_real.min()
+test_f_m = test_l_F_IF_real.max()-test_f_min
+
+test_l_C_IF = np.fft.ifft2(test_l_C)
+test_l_C_IF_real = test_l_C_IF.real
+test_C_min = test_l_C_IF_real.min()
+test_C_m = test_l_C_IF_real.max()-test_C_min
+
+for i in range(0, width):
+    for j in range(0, height):
+        test_l_F_IF_real[i, j] = test_l_F_IF_real[i, j] - test_f_min
+        test_l_F_IF_real[i, j] = int(test_l_F_IF_real[i, j] * 255 / test_f_m)
+        test_d[i, j] = test_l_F_IF_real[i, j]
+        test_l_C_IF_real[i, j] = test_l_C_IF_real[i, j] - test_C_min
+        test_l_C_IF_real[i, j] = int(test_l_C_IF_real[i, j] * 255 / test_C_m)
+        test_e[i, j] = test_l_C_IF_real[i, j]
+
+cv2.imshow('test_c', test_c)
+cv2.imshow('gauss_image', gauss_image)
+cv2.imshow('test_d', test_d)
+cv2.imshow('test_e', test_e)
+
+cv2.imwrite('./test_c.bmp', test_c)
+cv2.imwrite('./test_c_gauss_image.bmp', gauss_image)
+cv2.imwrite('./test_d.bmp', test_d)
+cv2.imwrite('./test_e.bmp', test_e)
+
+cv2.waitKey(0)
+cv2.destroyAllWindows()
+
